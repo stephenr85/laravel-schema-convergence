@@ -1,0 +1,8 @@
+/.phpunit.cache
+/vendor
+/composer.lock
+/.fleet
+/.idea
+/.vscode
+/CLAUDE.md
+/.phpunit.result.cache
