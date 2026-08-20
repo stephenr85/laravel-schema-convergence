@@ -171,18 +171,36 @@ mechanism that only ever rewrites published copies cannot reach a host's own fil
 
 ## Enforcement
 
-A sixth doctor audit — one predicate over package stubs, checking for the **absence** of a guard — is
-specified and **not yet built** (beam-facade ticket 30), because a conformance check flags its whole
-population until that population is swept. That sweep is now done in two halves: ticket 28 converted
-118 stubs in 22 `splicewire/*` packages, and ticket 36 converts the ten in the five beamless `rushing/*`
-packages this extraction unblocked. The audit ships after both, with **no beamless carve-out** — 34
-measured that audit-reach and import-reach are independent (the audit admits a `vendor/` package when
-it is a symlink, and all five are symlinked at the host), so there is no exclusion predicate to
-remember. It lives in beam's doctor regime, which is why the audit and the rule sit in different repos:
-the rule binds every publisher, the instrument runs where the hosts are.
+The sixth doctor audit is **built** (beam-facade ticket 30): `Splicewire\Beam\Doctor\UnguardedCreateAudit`,
+check key `beam.schema.unguarded-create`, advisory, registered in `BeamDoctorManifest`. It shipped after
+both halves of the sweep — ticket 28's 118 stubs in 22 `splicewire/*` packages and ticket 36's ten in the
+five beamless `rushing/*` packages this extraction unblocked — with **no beamless carve-out**, because 34
+measured that audit-reach and import-reach are independent (the audit admits a `vendor/` package when it
+is a symlink, and all five are symlinked at the host). It lives in beam's doctor regime, which is why the
+audit and the rule sit in different repos: the rule binds every publisher, the instrument runs where the
+hosts are.
 
-Until it lands, this page is the only statement of the rule, and beam's own six shared stubs are the
-worked example:
+Three things about what it actually checks, because two of them narrow the claim:
+
+- **The predicate is presence-of-`Schema::create`, not absence-of-guard.** A converted stub does not
+  wrap the create, it replaces it, so the two are the same set. It reads the file's own import map and
+  reports per *call* rather than per file — which is what catches 28's harder defect, a guard whose
+  scope is wrong (`create_permission_tables` guarded on `permissions` and returned for all five of its
+  creates, and every presence check in the estate scored it as conformant).
+- **The population is every migration template, never a `create_*` filename.** Ticket 22 specified this
+  check against `create_*` stubs and 28 profiled its sweep the same way; that is exactly how the
+  estate's one surviving unguarded create got past both, in
+  `splicewire/tower/database/migrations/tenant/add_directory_acl_grants_and_visibility.php.stub`, which
+  creates `grants` beside an ALTER and is honestly named for it. Converted at 30.
+- **It checks the necessary half only.** Importing the guard is not sufficient — 28 found six converted
+  stubs carrying raw `DB::statement` DDL beside the create and three adding a self-referencing FK in a
+  post-create `Schema::table()`, none of it covered by convergence and each carrying its own
+  hand-written idempotency guard. The audit reads all nine as conformant and says so in its own Pass
+  line. It also cannot reach a **published host copy** (19's exclude-generated-output rule), and a swept
+  package beside an unswept host is the estate's normal state; that gap is repaired by re-publishing,
+  not by an edit.
+
+This page remains the statement of the rule, and beam's own six shared stubs are the worked example:
 
 ```
 laravel-beam/database/migrations/shared/*.php.stub
