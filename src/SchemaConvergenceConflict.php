@@ -15,12 +15,22 @@ use RuntimeException;
  *
  * A conflict is therefore an install-time stop by design. The escape is {@see ConvergentTable::matches()},
  * the quiet terminal, for the call sites that genuinely do not care which shape won.
+ *
+ * The named constructor is `from()`, and it must never be called `report()`: Laravel's exception
+ * handler treats a `report` method on a throwable as the custom-reporting hook
+ * (`Reflector::isCallable([$e, 'report'])` in `Foundation\Exceptions\Handler`, which then invokes it
+ * THROUGH THE CONTAINER). A static named constructor of that name is callable by that test, so the
+ * container tries to build its `ConvergenceReport` argument and dies with
+ * `Unresolvable dependency resolving [Parameter #0 [ <required> string $table ]]` — replacing this
+ * exception's entire diagnosis with a container error at the one moment an operator needs to read it.
+ * Observed swallowing a live `permissions.id` uuid-vs-integer conflict during
+ * `splicewire:beam:install` at `~/Herd/fable` (beam-facade ticket 38).
  */
 class SchemaConvergenceConflict extends RuntimeException
 {
     public ConvergenceReport $report;
 
-    public static function report(ConvergenceReport $report): self
+    public static function from(ConvergenceReport $report): self
     {
         $lines = array_map(
             fn (SchemaConflict $conflict) => "  - [{$conflict->kind}] {$conflict->detail}",

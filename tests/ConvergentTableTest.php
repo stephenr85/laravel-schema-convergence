@@ -276,6 +276,17 @@ class ConvergentTableTest extends TestCase
         ConvergentTable::named('widgets')->assert();
     }
 
+    public function test_the_conflict_carries_no_report_method_for_laravel_to_hijack(): void
+    {
+        // Laravel's exception handler treats a `report` method on a throwable as the custom-reporting
+        // hook and calls it THROUGH THE CONTAINER, which cannot build a ConvergenceReport — so a
+        // named constructor called `report()` replaces this exception's diagnosis with
+        // "Unresolvable dependency resolving [Parameter #0 [ <required> string $table ]]" at exactly
+        // the moment an operator needs to read it (beam-facade ticket 38, seen at ~/Herd/fable).
+        $this->assertFalse(method_exists(SchemaConvergenceConflict::class, 'report'));
+        $this->assertTrue(method_exists(SchemaConvergenceConflict::class, 'from'));
+    }
+
     /** The declaration under test: two columns beyond a bare `id`, one required and one not. */
     protected function declaration(): ConvergentTable
     {

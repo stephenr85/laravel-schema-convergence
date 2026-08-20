@@ -161,7 +161,7 @@ class ConvergentTable
         $report = $this->converge();
 
         if ($report->hasConflicts()) {
-            throw SchemaConvergenceConflict::report($report);
+            throw SchemaConvergenceConflict::from($report);
         }
 
         return $report;
