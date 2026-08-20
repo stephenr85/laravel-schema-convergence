@@ -81,8 +81,10 @@ use Illuminate\Support\Traits\Tappable;
  * be added after the fact on sqlite, and a foreign key added to a populated table fails on the rows that
  * are already there — both are deliberate migrations, not convergence.
  *
- * Home is `laravel-beam/src/Schema/` even though nothing here is beam-specific, on the estate's
- * promote-only-once-proven rule. A second family package needing it is the promotion trigger.
+ * Homed here rather than in `laravel-beam/src/Schema/` since beam-facade ticket 34: the promotion
+ * trigger fired for five `rushing/*` packages that publish a `create_*` and carry no beam dependency
+ * at all. The standing rule that came with the move — any family package that publishes a `create_*`
+ * guards it convergently, whatever its vendor and whether or not it depends on beam.
  */
 class ConvergentTable
 {
