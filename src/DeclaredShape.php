@@ -12,7 +12,7 @@ use Illuminate\Support\Fluent;
  * throws it away. Nothing here ever reaches the database — the closure only appends to the blueprint,
  * and this class never compiles or builds it.
  *
- * It exists for one reason. Laravel turns a FLUENT index (`$table->string('form_key')->index()`) into an
+ * It exists for one reason. Laravel turns a FLUENT index (`$table->string('capture_key')->index()`) into an
  * index command inside `addFluentIndexes()`, which normally runs during `toSql()` — so a blueprint that
  * is never compiled reports the standalone `$table->unique([...])` calls and silently omits every inline
  * one. That method is `protected`, so reaching it means subclassing.
