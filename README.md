@@ -46,6 +46,28 @@ true and a top-up guard tops up nothing.
 `->assert()` (throws, the default) and `->matches()` (returns a bool, quiet) — differ only in how loud
 they are, never in what they did.
 
+## Ask before you migrate
+
+Both terminals answer from inside a `migrate`, one table at a time, after earlier tables in the same run
+have already changed — so an operator meets the first conflict as a stack trace with the rest of the
+queue unasked. `->report()` is the same comparison with the writes removed, and `rehearse()` applies it
+to a whole migration:
+
+```php
+$report = ConvergentTable::named('tags')->define($shape)->report();
+
+$report->hasConflicts();   // ask now, while an abort is free
+$report->summary();        // "would converge `tags`: add slug"
+
+// For a caller that holds a migration rather than a guard — every terminal in the body reports
+// instead of writing, and the reports come back.
+$reports = ConvergentTable::rehearse(fn () => $migration->up());
+```
+
+A rehearsal neutralises convergent guards and **nothing else**: the body runs, so anything else it does
+still happens. Establish that a body is a pure convergent declaration before rehearsing it, and say so
+when you decline — see the convention page. Every conflict also carries a `repair` sketch.
+
 ## Install
 
 ```

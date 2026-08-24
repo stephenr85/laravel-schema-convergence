@@ -86,6 +86,45 @@ below differ only in how loud they are, never in what they did.
 One terminal would force every call site into the other's shape, which is why both ship. But reaching
 for the quiet one is a claim about the table, and it belongs in a comment beside the call.
 
+## …and `->report()`, which is not a terminal at all
+
+Both terminals answer from **inside** a `migrate`, one table at a time, after earlier tables in the same
+run have already changed. That is correct and it is late. What an operator at `~/Herd/audiostud` got
+(beam-facade ticket 84) was three tables migrated, a stack trace on the fourth, and no answer to *how
+many more are queued*, *is the host half-installed*, *is re-running safe* — with ~30 pending, they
+learned about one conflict and stayed blind to any others behind it.
+
+- **`->report()`** returns the same `ConvergenceReport` with the writes removed. `assert()` and
+  `matches()` are both `report()` plus what they do about it, so there is no second comparison to drift.
+  `ConvergenceReport::$applied` distinguishes the two tenses, and it governs the *verb* only — a
+  prediction names exactly the columns and indexes the run then adds.
+- **`ConvergentTable::rehearse($body)`** is the same idea for a caller holding a *migration* rather than
+  a guard, because a guard is constructed inside the migration's own `up()` and there is nothing to call
+  `report()` on. It puts every terminal into report mode and returns the reports.
+
+**Rehearsal neutralises convergent guards and nothing else.** The body runs for real, so a
+`DB::statement()` sitting beside a guard still executes — and by this page's own count nine files in the
+estate carry exactly that. A caller must therefore establish that a body is a pure convergent
+declaration before rehearsing it, and must **say so** when it declines: a preflight that silently
+skipped its one risky migration would read as "everything is clean", which is the false-green shape this
+whole convention exists to end. `Splicewire\Beam\Install\ConvergencePreflight` is the worked example —
+it scans the source outside `down()`, skips anything that writes, and prints the skip.
+
+Two mechanics that are not obvious and cost a debugging session each:
+
+- **`migrate --pretend` is not an alternative to this.** Pretending makes `select()` return `[]`, so
+  every `getColumns()` the comparison depends on answers "no columns" and the guard reports a clean
+  convergence against a table it cannot see.
+- **A rehearsing caller must not `require` the real migration file.** PHP returns `true` rather than the
+  migration object on a second include of the same path, so a preflight running in the same process as
+  the `migrate` it precedes would hand the migrator a boolean. Copy to a temp path first; migrations are
+  anonymous classes with no `__DIR__` dependency.
+
+**Every conflict also carries a `repair`** — a code sketch in Laravel's schema vocabulary, never driver
+SQL, because this package has no connection to ask which driver is live. Diagnosis and repair are
+separate fields on purpose: the diagnosis is a fact, the repair is a suggestion offered with its caveat,
+since nothing here can know whether the column's data survives the cast.
+
 ## What convergence cannot do
 
 Convergence handles **absence**, never **conflict**. Three shapes it refuses rather than papers over,

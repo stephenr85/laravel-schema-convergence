@@ -33,14 +33,17 @@ class SchemaConvergenceConflict extends RuntimeException
     public static function from(ConvergenceReport $report): self
     {
         $lines = array_map(
-            fn (SchemaConflict $conflict) => "  - [{$conflict->kind}] {$conflict->detail}",
+            fn (SchemaConflict $conflict) => "  - [{$conflict->kind}] {$conflict->detail}"
+                .($conflict->repair === '' ? '' : "\n    repair: ".str_replace("\n", "\n    ", $conflict->repair)),
             $report->conflicts,
         );
 
         $exception = new self(
             "Cannot converge `{$report->table}` onto the shape this migration declares:\n"
             .implode("\n", $lines)
-            ."\nNothing was written — the table is exactly as it was."
+            ."\nNothing was written — the table is exactly as it was, and re-running this migration once "
+            .'the shapes are reconciled is safe: a convergent guard is idempotent, so it creates what is '
+            .'absent, adds what is missing, and does nothing at all to a table that already matches.'
         );
 
         $exception->report = $report;
