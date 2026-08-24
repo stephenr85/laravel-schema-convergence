@@ -19,6 +19,26 @@ we do not own. Neither page is complete alone: that one is about *sequencing pac
 about *two CREATEs of the same table*, which no amount of sequencing fixes because both sides believe
 they own it. It stays in beam because the installer that spends it does.
 
+## This posture is dated — read before extending it
+
+**Added 2026-08-24, beam-facade ticket 86, on the owner's ruling.**
+
+The Scope section below declares this a **standing rule** binding every `create_*` any family package
+publishes, and justifies the retroactive bind on greppability. That reasoning is sound and the reach is
+still correct — but the *posture* it serves is an artifact of greenfield blitz development, not a
+durable practice. Guarding everything is cheap and right while every database in the family is
+disposable. Once a deployed host holds real production or third-party data that depends on the schema
+as it was at install, a mechanism whose job is to silently top up a live table is a different
+proposition, and "add a convergent guard" stops being the free default it reads as here.
+
+Two consequences, until the exit is decided:
+
+- **Do not extend the regime further on the strength of this page reading as permanent.** Adding a
+  guard to a new `create_*` stub is still correct. Building new mechanisms that *depend* on guards
+  being everywhere — anything that re-runs a create against a live table — is the thing to hold.
+- **The exit is an open question, not an oversight.** What retires this posture, and what a deployed
+  host with third-party data gets instead, is owned by its own ticket on the beam-facade map.
+
 ## The rule
 
 > **A published `create_*` migration declares the shape it needs, not the table it creates.**
@@ -138,6 +158,20 @@ each naming a different repair (`Rushing\SchemaConvergence\SchemaConflict`):
   submissions fork turned out to have: not a missing column and not a type conflict, but **a different
   table wearing the same name**, disjoint in both directions. `->ignoringColumns()` exempts a column a
   host is deliberately filling itself.
+
+**A migration that has already run is out of reach entirely** — the fourth thing, and the one most
+often mistaken for convergence's job (beam-facade ticket 86). Editing a `create_*` stub changes what a
+*fresh* database gets; the guard only converges when its migration **runs**, and on an already-migrated
+host it does not. `migrate` says `Nothing to migrate.` and the live table keeps the old shape.
+
+Forcing it to run makes this **worse, not better**. Re-stamp the published copy with 29's ownership
+lever and the guard executes against a table that already has the old column: it ADDS the new one
+beside a NOT-NULL old one that nothing writes — which is `required-residue` above, the one shape this
+package records as unrepairable. The regime sharpens this hazard rather than softening it.
+
+The repair is not here. See "A published copy is a snapshot, not the source of truth" in
+`splicewire/laravel-beam`'s
+[`migration-publish-ordering.convention.md`](https://github.com/stephenr85/laravel-beam/blob/main/docs/agents/migration-publish-ordering.convention.md).
 
 **Type comparison is deliberately three-valued.** A declared type with no mapping for the current driver
 is reported *unverified*, never escalated to a conflict — the same conservative posture
