@@ -190,7 +190,16 @@ told, not conversion. The extension point is already there — `ConvergentTable`
 report names the conflicting column — so a host that must convert can macro one on without touching the
 class.
 
-## Two things that are NOT the fix
+> The trigger was **tested and did not fire**, 2026-08-27 (beam-facade ticket 108). Nine live type
+> conflicts across three tables at `~/Herd/audiostud` were re-measured against the trigger's own
+> condition and **not one host must upgrade**: five were an orphaned legacy shape whose declaring
+> package is no longer installed (0 rows, dropped under the greenfield ruling), and four are deliberate
+> host overrides that never adopt the package shape at all — see the next section. Widening
+> `->ignoringColumns()` from residue to type conflicts was proposed in the same session and refused:
+> it is a change to the guard's **contract**, offered on the same evidence that just failed to fire the
+> narrower trigger. Read this as *unfired*, not *unexamined*.
+
+## Three things that are NOT the fix
 
 **A publish-time filename band.** Publishing beam's creates into a `0001_01_01_*` band so they always
 sort first was considered and rejected on merit, not cost (`generateMigrationName` is `protected`; the
@@ -288,3 +297,40 @@ own acceptance is `Rushing\SchemaConvergence\Tests\ConvergentTableTest`, which t
 still carry raw `DB::statement` DDL beside the create, or add a self-referencing foreign key in a
 post-create `Schema::table()` — nine files in the estate do, and a file-shape predicate reads every one
 of them as conformant. The guard covers what it is given; it cannot see the statement next to it.
+
+**A shape-ownership door on the installer.** Ticket 29 gave the installer a door for *filenames* — who
+owns this stem, default beam, `--own-tables` to script it, re-date the published copy. The obvious
+symmetry is a door for **shapes**: when two declarations disagree about a column's type, let the
+operator say which one wins. It was considered across three sessions (beam-facade 84, 108) and is
+**refused**, on two grounds.
+
+The first is the one 84 gave: **the lever is not free the way 29's is.** Re-dating a file costs nothing
+and the migration still runs. "Accepting" a shape conflict costs everything, because the losing stub
+still executes at migrate time and still throws — so an `--accept-shapes` flag buys the operator the
+same stack trace a few tables later. 84 shipped **abort** instead (plus `--skip-preflight`) rather than
+mint a flag that pretends to resolve something.
+
+The second is stronger and is why this is a rule rather than a deferral: **the estate already has an
+answer, one file away from the conflict.** A host that disagrees with a package's declared shape
+**keeps its own published copy**, and the package stub defers to it. That is not a workaround — it is
+documented in the losing declaration's own docblock. `splicewire/laravel-beam-accounts`'
+`create_impersonation_events_table.php.stub` says it verbatim: *"audiostud declared `actor_id` as
+`foreignUuid`, numero as `foreignId` … A host that wants referential integrity keeps its own typed table
+and points [at it]."* Two hosts disagree with the stub, both are correct, both are served, and no flag
+exists or is needed. A door would be a second way to say what the estate already says.
+
+**The trigger that reverses this:** the day a **third-party** package and a family package disagree
+about a shape at a host that must keep both. Every instance measured so far is family-internal — both
+sides ours — where the honest answer *is* an edit to one of the two declarations, because we own both.
+Nobody has yet produced an instance where we own neither side of the argument.
+
+⚠️ **The cost of this rule, which is real and is separately instrumented.** A host override makes its
+own conflict **invisible**: the install-time preflight rehearses the *published copy*, finds it matches
+the live database, and passes — while the package stub it overrides sits one republish away from a
+tier-three throw. At `~/Herd/audiostud` that is a **154-row** `activity_log` behind a `uuid` override
+against a `string`-declaring stub. Neither of beam's two stub audits can see it, deliberately:
+`UnrehearsableStubAudit` reads published copies, `UnguardedCreateAudit` reads `.php.stub` templates, and
+the conflict falls between them. Beam ships a third audit that rehearses a **package stub against the
+live database** (beam-facade ticket 182) — advisory permanently, since whether a host's live shape
+conflicts with a package's declaration is a fact about the **host**. If you are relying on the override
+mechanism this section blesses, that audit is the thing that tells you what it is hiding.
