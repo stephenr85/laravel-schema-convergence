@@ -78,6 +78,46 @@ class ColumnTypeEquivalence
     ];
 
     /**
+     * Whether the map has an entry for a declared Laravel type at all — i.e. whether
+     * {@see self::matches()} can return anything but `null` for it.
+     *
+     * **This is the question an audit asks, and it is NOT answerable through `matches()`.** That method
+     * folds "no mapping for this type" and "mapped, and the column disagrees" into two different returns
+     * (`null` vs `false`) only once you already have a live column to compare against. An instrument that
+     * wants to know *"which declared types in this estate's convergent stubs would go UNVERIFIED"* has no
+     * database, no column, and nothing to pass as `$actual` — so without this it would have to reflect on
+     * a `protected const`, which makes the map's shape accidental API.
+     *
+     * Added 2026-08-27 for beam-facade ticket 183a
+     * ({@see \Rushing\Surgeon\Conformance\UnmappedConvergentTypeAudit} — named as prose, not linked,
+     * because this package must not know its consumers). Pass a driver to ask the narrower question,
+     * since a named driver REPLACES the `*` fallback rather than extending it.
+     */
+    public static function isMapped(string $declared, ?string $driver = null): bool
+    {
+        if ($driver === null) {
+            return isset(static::ACCEPTS[$declared]);
+        }
+
+        return (static::ACCEPTS[$declared][$driver] ?? static::ACCEPTS[$declared]['*'] ?? null) !== null;
+    }
+
+    /**
+     * Every declared Laravel type the map knows, sorted. The companion to {@see self::isMapped()}: an
+     * audit reporting an unmapped type is more useful when it can also say what the map does cover, and
+     * the remedy for most findings is *add the pairing here*.
+     *
+     * @return list<string>
+     */
+    public static function mappedTypes(): array
+    {
+        $types = array_keys(static::ACCEPTS);
+        sort($types);
+
+        return $types;
+    }
+
+    /**
      * TRUE / FALSE / null-for-unverified. `$actual` is the raw `type_name` from `Schema::getColumns()`.
      */
     public static function matches(string $driver, string $declared, string $actual): ?bool

@@ -50,6 +50,30 @@ therefore **escalates to a conflict when, and only when, the table is populated*
 condition the required-addition refusal already reads at `ConvergentTable:322`, deliberately not a second
 one that would have to stay in agreement with it. Measured first, then shipped; see the beam-facade map.
 
+⚠️ **NOT SHIPPED YET — that sentence is written in the present tense and describes a future.** `unverified`
+is still purely advisory today. The escalation is beam-facade ticket 184, and 115 required it be measured
+before it lands. **The file-only half of that measurement is now built and run** (183a):
+`Rushing\Surgeon\Conformance\UnmappedConvergentTypeAudit`, on surgeon's always-on channel, reporting which
+declared types across a root's convergent stubs have no entry in `ColumnTypeEquivalence` and would
+therefore go unverified.
+
+**Measured 2026-08-27 across every `~/Herd/*` root that installs surgeon — 14 roots, 698 convergent stubs:
+exactly one unmapped type, `enum`, in one stub** (`create_federation_grants_table.php.stub`, reaching two
+roots because tower is vendored into the flagship). Nothing else in the estate declares a type the map
+cannot judge, and **zero** Blueprint methods went unclassified.
+
+The `enum` mapping is deliberately **not** added in the same change. Laravel compiles `enum()` to
+`varchar(255)` plus a check constraint on Postgres, `varchar` plus a check on sqlite, and a real `enum` on
+MySQL — so the entry is a per-driver decision, and getting it wrong converts an UNVERIFIED (safe, advisory)
+into a **false conflict that stops an install**, which is the exact asymmetry this page's own calibration
+warns about. It rides with 184, where the populated-table question is being decided anyway.
+
+The other half of the measurement — *which of those sit on a table that holds rows* — is beam-tier, because
+learning a stub's declared shape by executing it needs `MigrationRehearsal`, which lives in
+`splicewire/laravel-beam` and cannot be reached from surgeon without inverting the tier. **Consequence
+worth stating: the five beamless `rushing/*` packages carrying convergent guards get the type census and
+not the rows census.**
+
 ⚠️ **The one hazard that does survive, and it is additive.** Convergence adds a column and fills it with
 NULL or the declared default. **Nothing backfills it.** A package that adds a column mid-life gets a
 correct schema and meaningless data on every pre-existing row, where a hand-written migration would have
