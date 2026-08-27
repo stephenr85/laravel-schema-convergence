@@ -376,3 +376,14 @@ the conflict falls between them. Beam ships a third audit that rehearses a **pac
 live database** (beam-facade ticket 182) — advisory permanently, since whether a host's live shape
 conflicts with a package's declaration is a fact about the **host**. If you are relying on the override
 mechanism this section blesses, that audit is the thing that tells you what it is hiding.
+
+**And you can now ASK, rather than waiting to be told.** `splicewire:beam:convergence-preflight`
+(beam-facade ticket 146) is the read-only entry point: it rehearses the pending set *and* the
+unpublished package stubs and prints the same three outcomes the install phase does, writing nothing.
+Until it existed, the question *"what would collide if I published?"* could be asked only by an operator
+willing to publish — the standing audit reports tier-three conflicts on its own schedule, and the
+would-change half had no instrument at all.
+
+⚠️ It reports; it does not gate. Whether a host's live shape conflicts with a package's declaration is a
+fact about the **host**, so the default exit code is 0 even when it finds conflicts, and
+`--fail-on-conflict` is opt-in for a caller who has deliberately chosen this host as the subject.
