@@ -19,25 +19,43 @@ we do not own. Neither page is complete alone: that one is about *sequencing pac
 about *two CREATEs of the same table*, which no amount of sequencing fixes because both sides believe
 they own it. It stays in beam because the installer that spends it does.
 
-## This posture is dated — read before extending it
+## The posture is AFFIRMED, and the fear it was dated against was mostly not real
 
-**Added 2026-08-24, beam-facade ticket 86, on the owner's ruling.**
+**Ruled 2026-08-27, beam-facade ticket 115, superseding the 2026-08-24 "this posture is dated"
+preamble that ticket 86 installed here.**
 
-The Scope section below declares this a **standing rule** binding every `create_*` any family package
-publishes, and justifies the retroactive bind on greppability. That reasoning is sound and the reach is
-still correct — but the *posture* it serves is an artifact of greenfield blitz development, not a
-durable practice. Guarding everything is cheap and right while every database in the family is
-disposable. Once a deployed host holds real production or third-party data that depends on the schema
-as it was at install, a mechanism whose job is to silently top up a live table is a different
-proposition, and "add a convergent guard" stops being the free default it reads as here.
+86 held this page open on the ground that *"a mechanism whose job is to silently top up a live table is
+a different proposition"* once a deployed host carries real data. 115 checked what the mechanism
+actually does and the premise does not survive it: **`ConvergentTable` has no destructive verb.**
+`converge()` performs exactly three writes — `create` a table that is absent, `addColumn`, and
+`convergeIndexes` — and every `->change()` in this package is a docblock or a remediation string
+`SchemaConflict` prints for a human to run. Nothing executes it. There is no drop, no rename, no type
+conversion, and there never has been.
 
-Two consequences, until the exit is decided:
+So the invasive verbs the posture was feared for **were never built**, and column changes and removals
+are gated by their own trigger (the `->change()` extension point, ruled out at ticket 22 and still
+unfired) rather than by this posture. Additive convergence against a populated table does not diverge a
+schema and does not lose data, and the three refusals already cover the additive cases that are unsafe
+— a type conflict, a NOT-NULL-no-default column added to a table that holds rows, and NOT-NULL residue.
 
-- **Do not extend the regime further on the strength of this page reading as permanent.** Adding a
-  guard to a new `create_*` stub is still correct. Building new mechanisms that *depend* on guards
-  being everywhere — anything that re-runs a create against a live table — is the thing to hold.
-- **The exit is an open question, not an oversight.** What retires this posture, and what a deployed
-  host with third-party data gets instead, is owned by its own ticket on the beam-facade map.
+**What this means for a reader.** The two holds 86 placed are lifted. Adding a guard to a new `create_*`
+stub is correct, as it always was; extending the regime on the strength of this page is no longer the
+thing to hold back. The Scope section below stands unamended.
+
+**One behaviour does change, and it is the whole of 115's exit.** `ColumnTypeEquivalence` returns an
+*unverified* verdict for a type pairing it has no mapping for, and today that is advisory — calibrated
+on *"a false conflict stops an install; a missed one leaves the status quo."* Against a table that holds
+rows those costs swap, because a missed conflict is a silent divergence under live data. `unverified`
+therefore **escalates to a conflict when, and only when, the table is populated** — the same single
+condition the required-addition refusal already reads at `ConvergentTable:322`, deliberately not a second
+one that would have to stay in agreement with it. Measured first, then shipped; see the beam-facade map.
+
+⚠️ **The one hazard that does survive, and it is additive.** Convergence adds a column and fills it with
+NULL or the declared default. **Nothing backfills it.** A package that adds a column mid-life gets a
+correct schema and meaningless data on every pre-existing row, where a hand-written migration would have
+carried a backfill. This is invisible on greenfield — there are no pre-existing rows — and it is a
+package-authoring problem rather than a guard behaviour, so it is not fixed here. It is owned by its own
+ticket on the beam-facade map.
 
 ## The rule
 
