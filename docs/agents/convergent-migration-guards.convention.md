@@ -62,11 +62,27 @@ exactly one unmapped type, `enum`, in one stub** (`create_federation_grants_tabl
 roots because tower is vendored into the flagship). Nothing else in the estate declares a type the map
 cannot judge, and **zero** Blueprint methods went unclassified.
 
-The `enum` mapping is deliberately **not** added in the same change. Laravel compiles `enum()` to
-`varchar(255)` plus a check constraint on Postgres, `varchar` plus a check on sqlite, and a real `enum` on
-MySQL — so the entry is a per-driver decision, and getting it wrong converts an UNVERIFIED (safe, advisory)
-into a **false conflict that stops an install**, which is the exact asymmetry this page's own calibration
-warns about. It rides with 184, where the populated-table question is being decided anyway.
+~~The `enum` mapping is deliberately **not** added in the same change.~~ **SHIPPED 2026-08-29
+(beam-facade 184's precondition half).** The reasoning that held it back was right and is what shaped the
+entry: Laravel compiles `enum()` to `varchar(255)` plus a check constraint on Postgres, `varchar` plus a
+check on sqlite, `nvarchar(255)` plus a check on SQL Server, and a real `enum` only on MySQL/MariaDB — so
+the entry is per-driver, and getting it wrong converts an UNVERIFIED (safe, advisory) into a **false
+conflict that stops an install**, the exact asymmetry this page's calibration warns about.
+
+**So the entry carries its precision half in the same change: `enum` is SOFT.** A soft type is recognised
+positively and never judged negatively — `matches()` returns `null`, not `false`, for a live column
+outside the modelled compilation (a native Postgres enum type, a domain, a `set`). **The property that
+buys is one-directional: a soft entry can turn UNVERIFIED into TRUE and can never arm a conflict that was
+previously dying quietly on a `null`.** That is what makes the mapping safe to land ahead of the
+escalation rather than only alongside it, against a population where 317 of 329 convergent declarations
+call the throwing terminal.
+
+⚠️ **And it introduces one blind spot, named here rather than left to be discovered.** The comparison is
+between type *names*; a soft type's real content is its allowed-value set, which lives in a check
+constraint or in the type's own parameters and is not what `Schema::getColumns()` reports as `type_name`.
+So `enum(['a','b'])` against a column constrained to `['a','b','c']` verifies **clean**. Convergence has
+no verb that could repair that anyway — but TRUE here means *"the compiled storage type agrees"*, not
+*"the constraint agrees"*.
 
 The other half of the measurement — *which of those sit on a table that holds rows* — is beam-tier, because
 learning a stub's declared shape by executing it needs `MigrationRehearsal`, which lives in
@@ -106,6 +122,13 @@ Two findings sharpen the ordering constraint this page already states, and both 
 So the escalation's only real-world firing needs a deliberate republish, and what it would refuse there
 is a **correct** column — which is exactly why the `enum` mapping must ride in front of, or in the same
 change as, 184.
+
+✅ **It rode in front, on 2026-08-29, and the consequence is worth stating plainly: the estate's
+unverified population is now ZERO.** That pairing verifies (`enum` → `varchar`), and it was the only one
+any of the three instruments could find. **`unverified` is a real mechanism with no live instances**, so
+every remaining question about escalating it — including 184's — is now reasoned against a zero-instance
+dataset and must be manufactured to be answered at all. The measurements above are kept as they were
+taken; they are the record of a population that has since been closed rather than a reading of today.
 
 The audit reports what it could not read, on every outcome including a clean one: declarations skipped
 unrehearsed, declarations that rehearsed and yielded no convergence report, and tables whose row read

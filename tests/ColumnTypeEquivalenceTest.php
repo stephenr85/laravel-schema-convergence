@@ -27,8 +27,49 @@ class ColumnTypeEquivalenceTest extends TestCase
         // Real Blueprint methods the map has no entry for — this is the population 183a exists to find,
         // not a hypothetical.
         $this->assertFalse(ColumnTypeEquivalence::isMapped('geometry'));
-        $this->assertFalse(ColumnTypeEquivalence::isMapped('enum'));
         $this->assertFalse(ColumnTypeEquivalence::isMapped('ipAddress'));
+        $this->assertFalse(ColumnTypeEquivalence::isMapped('macAddress'));
+    }
+
+    /**
+     * beam-facade 184 — `enum` was the estate's ONE unmapped declared type, measured three times across
+     * 14–15 `~/Herd` roots (183a by stub text, 187 by rehearsal, and a `psql` read in between). It is
+     * mapped now, and this is the assertion that says which compilation the entry claims.
+     */
+    public function test_enum_is_mapped_to_the_character_family_it_actually_compiles_to(): void
+    {
+        $this->assertTrue(ColumnTypeEquivalence::isMapped('enum'));
+
+        // `varchar(255) check (…)` on Postgres, `varchar check (…)` on sqlite, `nvarchar(255) check (…)`
+        // on SQL Server — the pairing the flagship's `federation_grants.pin_mode` actually holds.
+        $this->assertTrue(ColumnTypeEquivalence::matches('pgsql', 'enum', 'varchar'));
+        $this->assertTrue(ColumnTypeEquivalence::matches('sqlite', 'enum', 'varchar'));
+        $this->assertTrue(ColumnTypeEquivalence::matches('sqlsrv', 'enum', 'nvarchar'));
+
+        // …and a real `enum` only on MySQL/MariaDB, where the `*` fallback would have been wrong.
+        $this->assertTrue(ColumnTypeEquivalence::matches('mysql', 'enum', 'enum'));
+        $this->assertTrue(ColumnTypeEquivalence::matches('mariadb', 'enum', 'enum'));
+    }
+
+    /**
+     * The precision half of that widening, and the reason it is safe to land ahead of
+     * [184](escalate-unverified-on-a-populated-table): a soft entry can turn UNVERIFIED into TRUE and
+     * **can never turn it into a conflict**. Without this, a host holding a native Postgres enum type,
+     * or a domain, would go from a quiet advisory to an install-stopping refusal — 317 of the estate's
+     * 329 convergent declarations call the throwing terminal.
+     */
+    public function test_a_soft_types_non_match_degrades_to_unverified_rather_than_arming_a_conflict(): void
+    {
+        $this->assertTrue(ColumnTypeEquivalence::isSoft('enum'));
+
+        // A native Postgres enum type reports its own type name; a `set` reports `set`. Neither is the
+        // compilation this map models, and neither is evidence the schema is wrong.
+        $this->assertNull(ColumnTypeEquivalence::matches('pgsql', 'enum', 'pin_mode_enum'));
+        $this->assertNull(ColumnTypeEquivalence::matches('mysql', 'enum', 'set'));
+
+        // The contrast: a HARD type still conflicts, which is the whole point of the map.
+        $this->assertFalse(ColumnTypeEquivalence::isSoft('uuid'));
+        $this->assertFalse(ColumnTypeEquivalence::matches('pgsql', 'uuid', 'bigint'));
     }
 
     /**

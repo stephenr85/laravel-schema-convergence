@@ -164,12 +164,65 @@ class ConvergentTableTest extends TestCase
         $report = ConvergentTable::named('widgets')
             ->define(function (Blueprint $table) {
                 $table->uuid('id')->primary();
-                $table->enum('name', ['a', 'b']);
+                // A real Blueprint method the map has no entry for. This used to be `enum`, which was the
+                // estate's one live instance until beam-facade 184 mapped it.
+                $table->ipAddress('name');
             })
             ->assert();
 
         $this->assertSame(['name'], $report->unverified);
         $this->assertTrue($report->converged());
+    }
+
+    /**
+     * beam-facade 184 — the estate's ONE unverified pairing, reproduced end to end and then closed.
+     *
+     * `~/Herd/splicewire-app` `public.federation_grants.pin_mode`: a stub declaring `enum(['head','pinned'])`
+     * against a live column Laravel had compiled to `varchar` + a check. The declaration was correct, the
+     * column was correct, and the guard could not say so. It can now, and this asserts it *through the
+     * guard* rather than through the map, because the pairing that mattered was never a unit-test one.
+     */
+    public function test_the_enum_pairing_the_estate_actually_holds_now_verifies_instead_of_going_unverified(): void
+    {
+        Schema::create('widgets', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->enum('pin_mode', ['head', 'pinned'])->nullable();
+        });
+
+        DB::table('widgets')->insert(['id' => '00000000-0000-0000-0000-000000000001', 'pin_mode' => 'head']);
+
+        $report = ConvergentTable::named('widgets')
+            ->define(function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->enum('pin_mode', ['head', 'pinned'])->nullable();
+            })
+            ->assert();
+
+        $this->assertSame([], $report->unverified);
+        $this->assertSame([], $report->conflicts);
+        $this->assertTrue($report->converged());
+    }
+
+    /**
+     * The precision half, asserted where it would bite: a soft type whose live column is a compilation
+     * the map does not model must stay UNVERIFIED. If it conflicted, `assert()` would throw — and 317 of
+     * the estate's 329 convergent declarations call `assert()`.
+     */
+    public function test_a_soft_type_against_an_unmodelled_compilation_stays_unverified_and_does_not_throw(): void
+    {
+        // sqlite stores the declared type name verbatim, so this is a live column whose `type_name` is
+        // outside the character family — the stand-in for a native Postgres enum type.
+        DB::statement('create table widgets (id varchar not null primary key, pin_mode pin_mode_enum null)');
+
+        $report = ConvergentTable::named('widgets')
+            ->define(function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->enum('pin_mode', ['head', 'pinned'])->nullable();
+            })
+            ->assert();
+
+        $this->assertSame(['pin_mode'], $report->unverified);
+        $this->assertSame([], $report->conflicts);
     }
 
     // The two limits convergence cannot reach (ticket 23).

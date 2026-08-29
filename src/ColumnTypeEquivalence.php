@@ -22,6 +22,15 @@ namespace Rushing\SchemaConvergence;
  * accepted rather than papered over, because sqlite is the test driver and Postgres is the production one.
  * The damage cases this exists to catch survive it: `string` vs `bigint` and `uuid` vs `bigint` are
  * different families on every driver, and those are the two sightings with proven damage.
+ *
+ * **A fourth behaviour, for COMPILED types — {@see self::SOFT}.** A Laravel type like `enum()` has no
+ * database type of its own: it compiles to a *character* type plus a check constraint everywhere except
+ * MySQL. So the map can positively recognise that compilation and cannot honestly judge anything else —
+ * a native Postgres enum type, a domain, a `set` — because a non-match there does not distinguish
+ * *"wrong type"* from *"a compilation this map does not model"*. For a soft type a non-match therefore
+ * returns `null` (UNVERIFIED) rather than `false`. **The consequence is the point: adding a soft entry can
+ * only ever turn UNVERIFIED into TRUE, never into a conflict**, so it cannot arm an install-stopping
+ * refusal that was previously dying quietly on a `null`.
  */
 class ColumnTypeEquivalence
 {
@@ -75,7 +84,31 @@ class ColumnTypeEquivalence
 
         // Bytes
         'binary' => ['*' => ['blob', 'bytea', 'varbinary', 'longblob', 'binary']],
+
+        // Compiled — SOFT, see below. Laravel compiles `enum()` to `varchar(255) check (…)` on Postgres,
+        // `varchar check (…)` on sqlite, `nvarchar(255) check (…)` on SQL Server, and a real `enum` only
+        // on MySQL/MariaDB, so the accepted set is the character family everywhere but there.
+        'enum' => [
+            '*' => ['varchar', 'character varying', 'nvarchar', 'bpchar', 'char', 'character'],
+            'mysql' => ['enum'],
+            'mariadb' => ['enum'],
+        ],
     ];
+
+    /**
+     * Declared types whose non-match is UNVERIFIED rather than a conflict.
+     *
+     * ⚠️ **What this cannot see, stated because the entry above is what introduces the blind spot.** The
+     * comparison is between type NAMES. A soft type's real content is its allowed-value set, and that is
+     * carried in a check constraint (Postgres, sqlite, SQL Server) or in the type's own parameters
+     * (MySQL) — neither of which `Schema::getColumns()` reports as `type_name`. So `enum(['a','b'])`
+     * against a live column constrained to `['a','b','c']` verifies **clean**. Convergence has no verb
+     * that could repair such a divergence anyway, but a reader must not mistake TRUE here for
+     * *"the constraint agrees"*; it means *"the compiled storage type agrees"*.
+     *
+     * @var list<string>
+     */
+    protected const SOFT = ['enum'];
 
     /**
      * Whether the map has an entry for a declared Laravel type at all — i.e. whether
@@ -92,6 +125,10 @@ class ColumnTypeEquivalence
      * ({@see \Rushing\Surgeon\Conformance\UnmappedConvergentTypeAudit} — named as prose, not linked,
      * because this package must not know its consumers). Pass a driver to ask the narrower question,
      * since a named driver REPLACES the `*` fallback rather than extending it.
+     *
+     * ⚠️ A SOFT type answers TRUE here and can still report `unverified` at a live column, because its
+     * non-match degrades to `null` — so this is *"the map has an entry"*, not *"a verdict is guaranteed"*.
+     * {@see self::isSoft()}.
      */
     public static function isMapped(string $declared, ?string $driver = null): bool
     {
@@ -118,6 +155,15 @@ class ColumnTypeEquivalence
     }
 
     /**
+     * Whether a declared type is SOFT — recognised positively, never judged negatively.
+     * {@see self::SOFT} for why, and for the blind spot the entry carries.
+     */
+    public static function isSoft(string $declared): bool
+    {
+        return in_array($declared, static::SOFT, true);
+    }
+
+    /**
      * TRUE / FALSE / null-for-unverified. `$actual` is the raw `type_name` from `Schema::getColumns()`.
      */
     public static function matches(string $driver, string $declared, string $actual): ?bool
@@ -128,6 +174,14 @@ class ColumnTypeEquivalence
             return null;
         }
 
-        return in_array(strtolower(trim($actual)), $accepted, true);
+        $matched = in_array(strtolower(trim($actual)), $accepted, true);
+
+        // A soft type's non-match is a gap in the MAP, not a disagreement in the schema, so it degrades
+        // to UNVERIFIED rather than manufacturing a conflict this class cannot defend.
+        if (! $matched && static::isSoft($declared)) {
+            return null;
+        }
+
+        return $matched;
     }
 }
