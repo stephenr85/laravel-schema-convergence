@@ -47,7 +47,7 @@ thing to hold back. The Scope section below stands unamended.
 on *"a false conflict stops an install; a missed one leaves the status quo."* Against a table that holds
 rows those costs swap, because a missed conflict is a silent divergence under live data. `unverified`
 therefore **escalates to a conflict when, and only when, the table is populated** — the same single
-condition the required-addition refusal already reads at `ConvergentTable:322`, deliberately not a second
+condition the required-addition refusal already reads at `ConvergentTable.php:329`, deliberately not a second
 one that would have to stay in agreement with it. Measured first, then shipped; see the beam-facade map.
 
 ⚠️ **NOT SHIPPED YET — that sentence is written in the present tense and describes a future.** `unverified`
@@ -73,6 +73,44 @@ learning a stub's declared shape by executing it needs `MigrationRehearsal`, whi
 `splicewire/laravel-beam` and cannot be reached from surgeon without inverting the tier. **Consequence
 worth stating: the five beamless `rushing/*` packages carrying convergent guards get the type census and
 not the rows census.**
+
+**That half is now built and run** (beam-facade 187):
+`Splicewire\Beam\Doctor\UnverifiedOnPopulatedTableAudit`, registered in `BeamDoctorManifest` and
+advisory permanently, because whether a table holds rows *here* is a fact about the host. It rehearses
+two populations — the published copies a host's next `migrate` will run, and the package templates a
+`vendor:publish` would stamp in — and reports every `unverified` column whose table exists and is
+non-empty, deduplicated by `table.column` so a stub and the copy stamped from it are one pairing.
+
+**Measured 2026-08-29 across all 15 `~/Herd/*` roots that vendor `laravel-beam`** (realpath-deduped, so
+`beam`/`satellite`/`tower` count once as their starters). 14 ran; `beam-pilot-gcp-cloud-run` could not,
+because it vendors a *copied* `laravel-beam` directory dated 08-25 rather than a symlink, so no audit
+added since then exists there at all.
+
+**Exactly one pairing in the estate, and it is at the flagship only:**
+
+```
+~/Herd/splicewire-app   public.federation_grants.pin_mode      (table holds rows)
+declared  $table->enum('pin_mode', ['head','pinned'])->nullable()
+          splicewire/tower  create_federation_grants_table.php.stub
+live      varchar + CHECK (pin_mode = ANY (ARRAY['head','pinned']))
+```
+
+Two findings sharpen the ordering constraint this page already states, and both cut the same way:
+
+- **The pairing reaches the flagship through the package TEMPLATE only.** The flagship's own published
+  `create_federation_grants_table` is a squashed, host-owned plain `Schema::create` carrying **no
+  convergent guard at all**, so no migration this host will run can escalate. The refusal would require
+  republishing tower's stub over the host copy.
+- **`laravel-tower-starter`, the one other root that stub reaches, has no `federation_grants` table.**
+
+So the escalation's only real-world firing needs a deliberate republish, and what it would refuse there
+is a **correct** column — which is exactly why the `enum` mapping must ride in front of, or in the same
+change as, 184.
+
+The audit reports what it could not read, on every outcome including a clean one: declarations skipped
+unrehearsed, declarations that rehearsed and yielded no convergence report, and tables whose row read
+could not be taken. Across the 14 roots the latter two are **zero**; skips run 2–32 per root (the
+flagship's 32 of 182) and are `RehearsalSafety` refusals, which must stay refusals.
 
 ⚠️ **The one hazard that does survive, and it is additive.** Convergence adds a column and fills it with
 NULL or the declared default. **Nothing backfills it.** A package that adds a column mid-life gets a
