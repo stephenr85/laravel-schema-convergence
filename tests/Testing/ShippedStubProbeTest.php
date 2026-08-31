@@ -128,4 +128,16 @@ class ShippedStubProbeTest extends TestCase
 
         $this->assertNotContains('probe_widgets', $probe->tables(config('database.default')));
     }
+
+    public function test_it_runs_a_legacy_named_class_stub_that_returns_nothing(): void
+    {
+        // `require` on this form yields int 1. A probe assuming the modern anonymous-class spelling
+        // dies on "Call to a member function up() on int", which reads as a broken stub and is not
+        // one — splicewire/laravel-beam-tenancy ships two of these and Laravel's migrator runs them.
+        $probe = new ShippedStubProbe(__DIR__.'/../fixtures/legacy', 'legacy_probe');
+        $probe->run($probe->orderedStems());
+
+        $this->assertContains('probe_legacy', $probe->tables());
+        $this->assertSame(['id' => 'integer not-null', 'tag' => 'varchar not-null'], $probe->shape('probe_legacy'));
+    }
 }

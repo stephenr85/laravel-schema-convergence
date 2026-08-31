@@ -1,0 +1,18 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+// The legacy spelling: a NAMED class and no return, so `require` yields 1 rather than an object.
+// Laravel's migrator resolves this from the file stem, and stubs in this estate still use it.
+class CreateProbeLegacyTable extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('probe_legacy', function (Blueprint $table): void {
+            $table->id();
+            $table->string('tag');
+        });
+    }
+}

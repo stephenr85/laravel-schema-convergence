@@ -149,8 +149,7 @@ final class ShippedStubProbe
 
         try {
             foreach ($stems as $stem) {
-                $migration = require rtrim($this->migrationsRoot, '/')."/{$stem}.php.stub";
-                $migration->up();
+                $this->migrationFor($stem)->up();
             }
         } finally {
             config()->set('database.default', $previous);
@@ -160,6 +159,39 @@ final class ShippedStubProbe
                 config()->set($key, $value);
             }
         }
+    }
+
+
+    /**
+     * Resolve one stub to a runnable migration, in both spellings Laravel accepts.
+     *
+     * The modern form `return new class extends Migration` hands the object back from `require`. The
+     * legacy form declares a NAMED class and returns nothing, so `require` yields `1` and a probe that
+     * assumed the modern form dies on `Call to a member function up() on int` — which reads as a broken
+     * stub and is not one. Laravel's own migrator still supports the named form by deriving the class
+     * from the file stem, and `splicewire/laravel-beam-tenancy` ships two stubs that use it.
+     *
+     * Deriving the same way the migrator does is the point: if this cannot resolve a stub, a host
+     * publishing it could not run it either, so the failure is worth surfacing rather than skipping.
+     */
+    private function migrationFor(string $stem): object
+    {
+        $returned = require rtrim($this->migrationsRoot, '/')."/{$stem}.php.stub";
+
+        if (is_object($returned)) {
+            return $returned;
+        }
+
+        $class = str_replace(' ', '', ucwords(str_replace('_', ' ', basename($stem))));
+
+        if (! class_exists($class)) {
+            throw new \RuntimeException(
+                "Stub [{$stem}] returned no migration object and no class [{$class}] was declared. "
+                .'A host would resolve it the same way and fail the same way.'
+            );
+        }
+
+        return new $class;
     }
 
     private function alreadyRun(): bool
