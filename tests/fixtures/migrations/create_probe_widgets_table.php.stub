@@ -1,0 +1,24 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Rushing\SchemaConvergence\ConvergentTable;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        ConvergentTable::named($this->target())
+            ->define(function (Blueprint $table): void {
+                $table->uuid('id')->primary();
+                $table->string('label');
+                $table->string('note')->nullable();
+            })
+            ->assert();
+    }
+
+    private function target(): string
+    {
+        return 'probe_widgets';
+    }
+};
