@@ -42,17 +42,25 @@ schema and does not lose data, and the three refusals already cover the additive
 stub is correct, as it always was; extending the regime on the strength of this page is no longer the
 thing to hold back. The Scope section below stands unamended.
 
-**One behaviour does change, and it is the whole of 115's exit.** `ColumnTypeEquivalence` returns an
-*unverified* verdict for a type pairing it has no mapping for, and today that is advisory — calibrated
-on *"a false conflict stops an install; a missed one leaves the status quo."* Against a table that holds
-rows those costs swap, because a missed conflict is a silent divergence under live data. `unverified`
-therefore **escalates to a conflict when, and only when, the table is populated** — the same single
-condition the required-addition refusal already reads at `ConvergentTable.php:329`, deliberately not a second
-one that would have to stay in agreement with it. Measured first, then shipped; see the beam-facade map.
+**One behaviour was going to change, and it is now ruled OUT (2026-09-02, beam-facade 184).**
+`ColumnTypeEquivalence` returns an *unverified* verdict for a type pairing it has no mapping for, and that
+is advisory — calibrated on *"a false conflict stops an install; a missed one leaves the status quo."*
+115's exit proposed that `unverified` escalate to a `SchemaConflict` when, and only when, the table is
+populated. **It does not, and will not**, on the estate's standing rule
+(`~/Workspaces/splicewire-ecosystem/AGENTS.md`, *"A check whose answer depends on the host must not
+throw"*): whether a table holds rows *here* is a fact about the host, and a host fact licenses an advisory
+finding, never a fatal — 317 of the estate's 329 convergent declarations call the throwing terminal, so the
+escalation would have turned a package-level map gap into an install-stopping refusal keyed on a host's
+rows. The defect it was for is covered **advisorily** end to end: 183a below for the map gap with no
+database, and 187 (`beam.schema.unverified-populated`, in `splicewire/laravel-beam`) for the rows half at
+any beam host. Its population read **zero** on the day it was ruled — 240 convergent stubs / 17 declared
+types all mapped against a 29-type map at `~/Herd/splicewire-app`; 151 of 185 declarations rehearsed
+there, none `unverified` on a table holding rows. `SchemaConflict::requiredAddition` (the `$populated` read
+at `ConvergentTable.php:329`) is unchanged: it refuses an addition that *cannot be made correctly* under
+any host — the declaration's own omission of a nullable/default — which is why it is not the precedent
+the escalation was argued from.
 
-⚠️ **NOT SHIPPED YET — that sentence is written in the present tense and describes a future.** `unverified`
-is still purely advisory today. The escalation is beam-facade ticket 184, and 115 required it be measured
-before it lands. **The file-only half of that measurement is now built and run** (183a):
+**The file-only half of the measurement is built and run** (183a):
 `Rushing\Surgeon\Conformance\UnmappedConvergentTypeAudit`, on surgeon's always-on channel, reporting which
 declared types across a root's convergent stubs have no entry in `ColumnTypeEquivalence` and would
 therefore go unverified.
